@@ -1,0 +1,39 @@
+# Credit Risk Scorer
+
+Predicts whether a loan applicant is a good or bad credit risk, using the German Credit Data dataset (1,000 applicants, 20 features covering financial history, employment, housing, and demographics).
+
+## Why this project
+
+Credit scoring is a classic imbalanced-classification problem — most applicants are "good" risks, so a naive model can look accurate while still missing most of the bad-risk cases that actually matter to a lender. This project focuses on that tradeoff rather than just chasing raw accuracy.
+
+## Approach
+
+1. **Data prep**: one-hot encoded 11 categorical features (checking status, credit history, purpose, employment, etc.), expanding to 60 features from the original 21.
+2. **Baseline model**: Decision Tree Classifier — 71.5% accuracy, but weak recall (0.53) on the minority "bad risk" class.
+3. **Class weighting**: adjusted `class_weight="balanced"` — marginal improvement (72% accuracy), recall on bad-risk class actually dropped slightly.
+4. **Random Forest**: switched algorithms — no improvement yet on its own.
+5. **SMOTE oversampling + Random Forest (500 estimators)**: this combination is what actually moved the needle — final accuracy **79%**, recall on the bad-risk class up to 0.54 with precision 0.67, and the "good risk" class recall improved to 0.89.
+
+## Results (final model)
+
+| | Precision | Recall | F1 |
+|---|---|---|---|
+| Bad risk | 0.67 | 0.54 | 0.60 |
+| Good risk | 0.82 | 0.89 | 0.85 |
+| **Accuracy** | | | **0.79** |
+
+## What I'd do differently at scale
+
+- Try threshold tuning instead of just class weighting/SMOTE — for a real lending use case, the cost of a false "good risk" (approving a bad loan) is usually much higher than a false "bad risk" (rejecting a good applicant), and that asymmetry should drive the decision threshold, not just the training strategy.
+- Cross-validation instead of a single train/test split — 1,000 rows is small enough that a single 80/20 split has real variance.
+- Feature importance analysis to understand which factors are actually driving the model's decisions — important both for debugging and for any real credit-scoring use case, where explainability matters.
+
+## Files
+
+- `credit_risk_project.ipynb` — full analysis and modeling
+- `credit_customers.csv`, `german_credit_data.csv` — source data
+- `credit_risk_model.pkl` — saved final model (Random Forest + SMOTE)
+
+## Stack
+
+Python, pandas, scikit-learn, imbalanced-learn (SMOTE), joblib
