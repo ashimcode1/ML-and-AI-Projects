@@ -1,0 +1,41 @@
+# Intelligent Document Assistant
+
+A RAG (Retrieval-Augmented Generation) app that lets you upload a PDF and ask questions about it, answered using only the document's own content — not the model's general knowledge.
+
+## Why this project
+
+This is the project that demonstrates the core GenAI-engineering skill set end-to-end: not just calling an LLM API, but building the retrieval pipeline around it — chunking, embeddings, vector search, and grounding the model's answer in retrieved context instead of letting it answer from memory.
+
+## How it works
+
+1. **PDF text extraction** — `pypdf` pulls raw text from the uploaded document.
+2. **Chunking** — `RecursiveCharacterTextSplitter` (LangChain) splits the text into 1,000-character chunks with 200-character overlap, so context isn't lost at chunk boundaries.
+3. **Embeddings** — each chunk is encoded with `sentence-transformers` (`all-MiniLM-L6-v2`), a lightweight local embedding model.
+4. **Vector store** — embeddings are indexed in FAISS (`IndexFlatL2`) for similarity search.
+5. **Retrieval + generation** — a user's question is embedded, the top-3 most similar chunks are retrieved, and those chunks are passed as context to Groq's `llama-3.1-8b-instant`, which is instructed to answer *only* from that context.
+6. **UI** — a Streamlit front end: upload a PDF, ask a question, get an answer, with basic stats (character/chunk counts) shown along the way.
+
+## Try it
+
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+You'll need a free Groq API key in a `.env` file (see `.env.example`) — never commit the real `.env`.
+
+## What I'd do differently at scale
+
+- **Separate the pipeline from the UI script.** Right now the retrieval/generation functions run inline as soon as the script starts (including a hardcoded test call against `computer.pdf`), before the Streamlit app even loads — fine for learning, but I'd refactor this into proper functions/modules that only run when actually called, especially once this needs to handle multiple users or documents.
+- **Add evaluation.** There's currently no way to check whether an answer is actually well-grounded in the retrieved chunks versus the model filling gaps from its own knowledge — a framework like RAGAS (faithfulness, answer relevancy, context precision) would make this defensible rather than just "it seems to work."
+- **Handle retrieval failure explicitly.** If the top-3 chunks don't actually contain the answer, the model should say so rather than guessing — right now nothing checks retrieval quality before generation.
+- **Cache the embedding model and index** rather than rebuilding on every upload, once this needs to run for more than one user at a time.
+
+## Files
+
+- `app.py` — full pipeline: PDF extraction → chunking → embeddings → FAISS index → retrieval → generation → Streamlit UI
+- Sample PDFs used for testing during development
+
+## Stack
+
+Python, Streamlit, Groq API (Llama 3.1), LangChain (text splitting), sentence-transformers, FAISS, pypdf
